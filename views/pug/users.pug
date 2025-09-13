@@ -3,11 +3,13 @@ html
   head
     title Список користувачів
     link(rel="stylesheet", href="/styles.css")
-  body
-    .container
-      h1 Список користувачів
-      ul
-        each user in users
-          li: a(href=`/users/${user.id}`) #{user.name} 
-      a.back-link(href="/") ← На головну
+    link(rel="icon", href="/favicon.ico")
+body(class=theme)
+  .container
+    h1 Список користувачів
+    ul
+      each user in users
+        li: a(href=`/users/${user.id}`) #{user.name} 
+    a.button.back(href="/") ← На головну
+
 

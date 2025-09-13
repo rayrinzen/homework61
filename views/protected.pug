@@ -1,0 +1,13 @@
+doctype html
+html
+  head
+    title Захищена сторінка
+    link(rel="stylesheet", href="/styles.css")
+    link(rel="icon", href="/favicon.ico")
+  body(class=theme)
+    .container
+      h1 Вітаю, #{user.name}!
+      p ID: #{user.id}
+      p Email: #{user.email}
+      a.button.back(href="/") ← На головну
+      
