@@ -14,6 +14,12 @@ html
         input(type="text" name="username" placeholder="Логін" required)
         input(type="email" name="email" placeholder="Email" required)
         input(type="password" name="password" placeholder="Пароль" required)
-        button(type="submit") Зареєструватися та увійти
+        button(type="submit") Зареєструватися 
+
+      h2 Увійти
+      form.auth-form(action="/login" method="POST")
+        input(type="text" name="username" placeholder="Логін" required)
+        input(type="password" name="password" placeholder="Пароль" required)
+        button(type="submit") Увійти
 
       a.button.back(href="/") ← Повернутися на головну
