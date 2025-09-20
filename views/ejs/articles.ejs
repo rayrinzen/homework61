@@ -13,11 +13,16 @@
         <h1>Список статей</h1>
         <ul>
             <% articles.forEach(article=> { %>
-                <li><a href="/articles/<%= article.id %>">
-                        <%= article.title %>
-                    </a></li>
-                <% }) %>
+                <% if (article && article.title) { %>
+                    <li>
+                        <a href="/articles/<%= article._id %>">
+                            <%= article.title %>
+                        </a>
+                    </li>
+                    <% } %>
+                        <% }) %>
         </ul>
+
         <a class="button back" href="/">← На головну</a>
     </div>
 </body>

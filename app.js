@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const cookieParser = require("cookie-parser");
@@ -5,11 +6,31 @@ const bcrypt = require("bcrypt");
 
 const session = require("express-session");
 const passport = require("passport");
+const { MongoClient, ObjectId } = require("mongodb");
+
 const LocalStrategy = require("passport-local").Strategy;
 
 
 const app = express();
-const port = 3000;
+const PORT = process.env.PORT || 3000;
+const client = new MongoClient(process.env.MONGO_URI);
+
+// підключення до манго
+let db; 
+async function connect() {
+  try {
+    await client.connect();
+    console.log("Успішно підключено до MongoDB Atlas");
+    db = client.db("myDatabase"); 
+    app.listen(PORT, () => {
+      console.log(`Сервер працює на http://localhost:${PORT}`);
+    });
+  } catch (err) {
+    console.error("Помилка підключення до MongoDB Atlas", err);
+    process.exit(1);
+  }
+}
+connect();
 
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
@@ -88,29 +109,26 @@ app.get("/users/:id", (req, res) => {
 });
 
 // EJS
-const articles = [
-  {
-    id: 1,
-    title: "Перша стаття",
-    content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-  },
-  {
-    id: 2,
-    title: "Друга стаття",
-    content:
-      "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-  },
-];
-
-app.get("/articles", (req, res) => {
-  res.render("ejs/articles.ejs", { articles, theme: res.locals.theme });
+// статті
+app.get("/articles", async (req, res) => {
+  try {
+    const articles = await db.collection("articles").find().toArray();
+    res.render("ejs/articles.ejs", { articles, theme: res.locals.theme });
+  } catch (err) {
+    res.status(500).send("Помилка отримання статей");
+  }
 });
 
-app.get("/articles/:id", (req, res) => {
-  const article = articles.find(a => a.id == req.params.id);
-  if (!article) return res.status(404).send("Статтю не знайдено");
-  res.render("ejs/article.ejs", { article, theme: res.locals.theme });
+app.get("/articles/:id", async (req, res) => {
+  try {
+    const article = await db.collection("articles").findOne({ _id: new ObjectId(req.params.id) });
+    if (!article) return res.status(404).send("Статтю не знайдено");
+    res.render("ejs/article.ejs", { article, theme: res.locals.theme });
+  } catch (err) {
+    res.status(500).send("Помилка отримання статті");
+  }
 });
+
 
 // авторизація 
 app.get("/auth", (req, res) => {
@@ -128,7 +146,7 @@ app.post("/auth", async (req, res) => {
 
   if (action === "register") {
     if (user)
-      return res.send("❌ Користувач вже існує! <a href='/auth'>Назад</a>");
+      return res.send("Користувач вже існує! <a href='/auth'>Назад</a>");
 
     const hashed = await bcrypt.hash(password, 10);
     const newId = usersDB.length + 1;
@@ -166,6 +184,3 @@ app.get("/logout", (req, res, next) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`Сервер працює на http://localhost:${port}`);
-});
