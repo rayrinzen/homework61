@@ -1,5 +1,7 @@
 const { MongoClient } = require('mongodb');
-const uri = 'mongodb+srv://rayushekrin_db_user:aviator0927@cluster0.wgyo1dc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+require("dotenv").config(); 
+
+const uri = process.env.MONGO_URI;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
 async function findUsersWithProjection() {

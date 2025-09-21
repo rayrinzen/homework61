@@ -1,8 +1,8 @@
 const { MongoClient } = require('mongodb');
+require("dotenv").config(); 
 
 // URI для підключення до MongoDB Atlas
-const uri = 'mongodb+srv://rayushekrin_db_user:aviator0927@cluster0.wgyo1dc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
-
+const uri = process.env.MONGO_URI;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
 async function insertManyCustomers() {

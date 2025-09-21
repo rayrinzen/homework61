@@ -129,6 +129,39 @@ app.get("/articles/:id", async (req, res) => {
   }
 });
 
+// маршрут з курсором
+app.get("/api/articles/cursor", async (req, res) => {
+  try {
+    const database = db;
+    const collection = database.collection("articles");
+
+    const cursor = collection.find({});
+    const results = [];
+
+    while (await cursor.hasNext()) {
+      const document = await cursor.next();
+      results.push(document);
+    }
+
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// агрегаційний запит
+app.get("/api/articles/stats", async (req, res) => {
+  try {
+    const pipeline = [
+      { $group: { _id: "$author", count: { $sum: 1 } } }
+    ];
+    const result = await db.collection("articles").aggregate(pipeline).toArray();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 // авторизація 
 app.get("/auth", (req, res) => {
