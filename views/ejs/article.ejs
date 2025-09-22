@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>
+        <%= article.title %>
+    </title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="icon" href="/favicon.ico">
+</head>
+
+<body class="<%= theme %>">
+    <div class="container">
+        <h1>
+            <%= article.title %>
+        </h1>
+        <p>
+            <%= article.content %>
+        </p>
+        <a class="button back" href="/articles">← Назад до списку</a>
+    </div>
+</body>

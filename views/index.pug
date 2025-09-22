@@ -1,0 +1,18 @@
+doctype html
+html
+  head
+    title Робота зі статичними файлами, Cookies та JWT на сервері Express
+    link(rel="stylesheet", href="/styles.css")
+    link(rel="icon", href="/favicon.ico")
+  body(class=theme)
+    .container
+      h1 Оберіть сторінку:
+      ul
+        li: a(href="/users") Список користувачів
+        li: a(href="/articles") Список статей  
+        li: a(href="/auth") Авторизація
+
+      h2 Вибір теми:
+      .theme-buttons
+        a.button(href="/theme/dark") Темна 
+        a.button(href="/theme/light") Світла 

@@ -1,0 +1,25 @@
+doctype html
+html
+  head
+    title Авторизація
+    link(rel="stylesheet", href="/styles.css")
+    link(rel="icon", href="/favicon.ico")
+  body(class=theme)
+    .auth-container
+      h1 Авторизація
+
+      h2 Зареєструватися
+      form.auth-form(action="/auth" method="POST")
+        input(type="hidden" name="action" value="register")
+        input(type="text" name="username" placeholder="Логін" required)
+        input(type="email" name="email" placeholder="Email" required)
+        input(type="password" name="password" placeholder="Пароль" required)
+        button(type="submit") Зареєструватися 
+
+      h2 Увійти
+      form.auth-form(action="/login" method="POST")
+        input(type="text" name="username" placeholder="Логін" required)
+        input(type="password" name="password" placeholder="Пароль" required)
+        button(type="submit") Увійти
+
+      a.button.back(href="/") ← Повернутися на головну
