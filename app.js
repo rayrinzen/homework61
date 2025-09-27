@@ -5,25 +5,21 @@ const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
 const session = require("express-session");
 const passport = require("passport");
-const { MongoClient, ObjectId } = require("mongodb");
 const LocalStrategy = require("passport-local").Strategy;
+const mongoose = require("mongoose");
+const Article = require("./models/Article");
+const User = require("./models/User");
+
 
 const app = express();
-const client = new MongoClient(process.env.MONGO_URI);
 
 // підключення до манго
-let db;
-async function connectDB() {
-  try {
-    await client.connect();
-    console.log("Успішно підключено до MongoDB Atlas");
-    db = client.db(process.env.DB_NAME || "myDatabase");
-  } catch (err) {
-    console.error("Помилка підключення до MongoDB Atlas", err);
-    process.exit(1);
-  }
-}
-connectDB();
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log("Підключено через Mongoose"))
+.catch((err) => console.error("Помилка Mongoose:", err));
 
 // middlewares
 app.use(cookieParser());
@@ -56,23 +52,32 @@ const usersDB = [];
 
 // passport
 passport.use(new LocalStrategy(async (username, password, done) => {
-  const user = usersDB.find((u) => u.name === username);
-  if (!user) return done(null, false, { message: "Немає такого користувача" });
+  try {
+    const user = await User.findOne({ name: username });
+    if (!user) return done(null, false, { message: "Немає такого користувача" });
 
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) return done(null, false, { message: "Невірний пароль" });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return done(null, false, { message: "Невірний пароль" });
 
-  return done(null, user);
+    return done(null, user);
+  } catch (err) {
+    return done(err);
+  }
 }));
 
 passport.serializeUser((user, done) => {
-  done(null, user.id);
+  done(null, user._id);
 });
 
-passport.deserializeUser((id, done) => {
-  const user = usersDB.find((u) => u.id === id);
-  done(null, user || false);
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findById(id);
+    done(null, user);
+  } catch (err) {
+    done(err, null);
+  }
 });
+
 
 
 // головна
@@ -90,21 +95,30 @@ app.get("/theme/:mode", (req, res) => {
 });
 
 // PUG 
-app.get("/users", (req, res) => {
-  res.render("pug/users", { users: usersDB, theme: res.locals.theme });
+app.get("/users", async (req, res) => {
+  try {
+    const users = await User.find();
+    res.render("pug/users", { users, theme: res.locals.theme });
+  } catch (err) {
+    res.status(500).send("Помилка отримання користувачів");
+  }
 });
 
-app.get("/users/:id", (req, res) => {
-  const user = usersDB.find(u => u.id == req.params.id);
-  if (!user) return res.status(404).send("Користувача не знайдено");
-  res.render("pug/user", { user, theme: res.locals.theme });
+app.get("/users/:id", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).send("Користувача не знайдено");
+    res.render("pug/user", { user, theme: res.locals.theme });
+  } catch (err) {
+    res.status(500).send("Помилка отримання користувача");
+  }
 });
 
 // EJS
 // статті
 app.get("/articles", async (req, res) => {
   try {
-    const articles = await db.collection("articles").find().toArray();
+    const articles = await Article.find();
     res.render("ejs/articles.ejs", { articles, theme: res.locals.theme });
   } catch (err) {
     res.status(500).send("Помилка отримання статей");
@@ -113,7 +127,7 @@ app.get("/articles", async (req, res) => {
 
 app.get("/articles/:id", async (req, res) => {
   try {
-    const article = await db.collection("articles").findOne({ _id: new ObjectId(req.params.id) });
+    const article = await Article.findById(req.params.id);
     if (!article) return res.status(404).send("Статтю не знайдено");
     res.render("ejs/article.ejs", { article, theme: res.locals.theme });
   } catch (err) {
@@ -124,22 +138,17 @@ app.get("/articles/:id", async (req, res) => {
 // маршрут з курсором
 app.get("/api/articles/cursor", async (req, res) => {
   try {
-    const database = db;
-    const collection = database.collection("articles");
-
-    const cursor = collection.find({});
+    const cursor = Article.find().cursor();
     const results = [];
-
-    while (await cursor.hasNext()) {
-      const document = await cursor.next();
-      results.push(document);
+    for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
+      results.push(doc);
     }
-
     res.json(results);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // агрегаційний запит
 app.get("/api/articles/stats", async (req, res) => {
@@ -147,7 +156,7 @@ app.get("/api/articles/stats", async (req, res) => {
     const pipeline = [
       { $group: { _id: "$author", count: { $sum: 1 } } }
     ];
-    const result = await db.collection("articles").aggregate(pipeline).toArray();
+    const result = await Article.aggregate(pipeline);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -167,17 +176,12 @@ app.get("/auth", (req, res) => {
 app.post("/auth", async (req, res) => {
   const { username, password, email, action } = req.body;
 
-  let user = usersDB.find((u) => u.name === username);
-
   if (action === "register") {
-    if (user)
-      return res.send("Користувач вже існує! <a href='/auth'>Назад</a>");
+    const existing = await User.findOne({ name: username });
+    if (existing) return res.send("Користувач вже існує! <a href='/auth'>Назад</a>");
 
     const hashed = await bcrypt.hash(password, 10);
-    const newId = usersDB.length + 1;
-
-    user = { id: newId, name: username, email, password: hashed };
-    usersDB.push(user);
+    await User.create({ name: username, email, password: hashed });
 
     return res.redirect("/auth");
   }
@@ -208,5 +212,11 @@ app.get("/logout", (req, res, next) => {
     res.redirect("/auth");
   });
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Сервер запущен на http://localhost:${PORT}`);
+});
+
 
 module.exports = app;
